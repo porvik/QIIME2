@@ -7,7 +7,6 @@ format:
   html:
     toc: true
     toc-depth: 3
-    css: assets/styles.css
     theme: cosmo
 execute:
   eval: false
@@ -17,8 +16,7 @@ execute:
 
 Antes de comenzar el análisis de secuencias, es necesario crear un entorno Conda específico que contenga QIIME2 y todas sus dependencias. Esto asegura que las versiones de los programas y librerías sean compatibles y evita conflictos con otras instalaciones. Una vez creado el entorno, se activa y se accede al directorio donde se almacenarán los datos y resultados del proyecto.
 
-```{bash}
-#| echo: false
+```bash
 conda env create  --name qiime2-amplicon-2025.10 \
     --file https://raw.githubusercontent.com/qiime2/distributions/refs/heads/dev/2025.10/amplicon/released/qiime2-amplicon-ubuntu-latest-conda.yml
 conda activate qiime2-amplicon-2025.10
@@ -29,8 +27,7 @@ cd work/bioinf/sopg/qime3/
 
 Se crea un directorio específico para el análisis del conjunto de datos del desierto de Atacama. Dentro de este directorio se genera una carpeta para almacenar las secuencias paired-end en formato EMP. A continuación, se descargan tanto el archivo de metadatos de las muestras como los archivos de secuenciación (lecturas forward, reverse y barcodes). Estos datos constituyen la entrada bruta del análisis.
 
-```{bash}
-#| echo: false
+```bash
 mkdir qiime2-atacama/emp-paired-end-sequences
 cd qiime2-atacama/
 wget -O "sample-metadata.tsv" https://data.qiime2.org/2023.9/tutorials/atacama-soils/sample_metadata.tsv
@@ -43,8 +40,7 @@ wget -O "emp-paired-end-sequences/barcodes.fastq.gz" https://data.qiime2.org/202
 
 Los archivos de secuenciación descargados se encuentran en formato EMP paired-end (forward, reverse y barcodes). Para que QIIME2 pueda trabajar con ellos, es necesario importarlos a su formato interno de artefactos (.qza). Este paso no modifica las secuencias, únicamente las encapsula en un objeto reconocible por el entorno de análisis.
 
-```{bash}
-#| echo: false
+```bash
 qiime tools import \
   --type EMPPairedEndSequences \
   --input-path emp-paired-end-sequences \
@@ -55,8 +51,7 @@ qiime tools import \
 
 En este paso se separan las lecturas crudas en archivos individuales por muestra utilizando las secuencias de códigos de barras (barcodes). El archivo de metadatos contiene la columna con las secuencias de barcode asociadas a cada muestra. Además, se aplica la corrección de orientación de los barcodes para asegurar su coincidencia correcta con las lecturas. El resultado es un conjunto de secuencias ya asignadas a cada muestra.
 
-```{bash}
-#| echo: false
+```bash
 qiime demux emp-paired \
   --m-barcodes-file sample-metadata.tsv \
   --m-barcodes-column barcode-sequence \
@@ -70,8 +65,7 @@ qiime demux emp-paired \
 
 Antes de aplicar filtrados más estrictos, se realiza un submuestreo aleatorio de una fracción de las secuencias demultiplexadas. Esto permite obtener una vista rápida de la calidad de las lecturas sin necesidad de procesar todo el conjunto de datos. A partir de estas secuencias submuestreadas se genera una visualización interactiva que muestra la distribución de calidad a lo largo de las lecturas, información necesaria para decidir los parámetros de recorte y truncado en pasos posteriores.
 
-```{bash}
-#| echo: false
+```bash
 qiime demux subsample-paired \
   --i-sequences demux-full.qza \
   --p-fraction 0.3 \
@@ -92,8 +86,7 @@ La visualización generada permite inspeccionar la calidad de las bases a lo lar
 
 El filtrado de muestras se realizó estableciendo un umbral mínimo de 500 lecturas forward por muestra. Este valor se eligió para eliminar muestras con una profundidad de secuenciación excesivamente baja, ya que un número muy reducido de lecturas no permite capturar adecuadamente la diversidad microbiana presente y puede introducir alta variabilidad técnica. Un umbral más bajo, como 100 lecturas, permitiría conservar más muestras, pero a costa de incluir perfiles comunitarios poco representativos y con alta sensibilidad al azar. Por tanto, el valor de 500 lecturas constituye un compromiso razonable entre conservar un número suficiente de muestras y garantizar una cobertura mínima adecuada para los análisis posteriores de denoising y diversidad.
 
-```{bash}
-#| echo: false
+```bash
 qiime demux filter-samples \
   --i-demux demux-subsample.qza \
   --m-metadata-file ./demux-subsample/per-sample-fastq-counts.tsv \
@@ -113,8 +106,7 @@ qiime tools export \
 
 En este paso se aplica DADA2 para corregir errores de secuenciación e inferir ASVs (amplicon sequence variants), que son variantes exactas de secuencia. DADA2 realiza filtrado por calidad, recorte de bases iniciales, truncado a longitudes fijas, aprendizaje del modelo de error, unión de pares (forward/reverse) y eliminación de quimeras. El resultado principal es una tabla de abundancias de ASVs por muestra y un conjunto de secuencias representativas, además de estadísticas detalladas del proceso para comprobar cuántas lecturas se pierden en cada etapa. Los parámetros --p-trim-left-\* eliminan bases iniciales (típicamente por primers/adaptadores o baja calidad al inicio). Los parámetros --p-trunc-len-\* fijan la longitud final de las lecturas tras truncado; se eligen a partir del perfil de calidad observado en demux.qzv (y deben permitir el solapamiento suficiente para unir forward y reverse).
 
-```{bash}
-#| echo: false
+```bash
 qiime dada2 denoise-paired \
   --i-demultiplexed-seqs demux.qza \
   --p-trim-left-f 13 \
@@ -156,8 +148,7 @@ qiime tools export \
 
 Para incorporar la información evolutiva en los análisis de diversidad, primero se alinean las secuencias representativas inferidas por DADA2. A partir del alineamiento se genera un árbol filogenético. Este árbol permite calcular métricas de diversidad filogenética y distancias entre comunidades que tienen en cuenta las relaciones evolutivas entre los taxones detectados. Una vez construido el árbol, se ejecuta el módulo core-metrics-phylogenetic, que calcula automáticamente métricas de diversidad alfa y beta tras aplicar rarefacción de la tabla de ASVs a una profundidad de muestreo uniforme.
 
-```{bash}
-#| echo: false
+```bash
 qiime phylogeny align-to-tree-mafft-fasttree \
   --i-sequences rep-seqs.qza \
   --o-alignment aligned-rep-seqs.qza \
@@ -177,7 +168,7 @@ qiime diversity core-metrics-phylogenetic \
   --output-dir core-metrics-results
 ```
 
-### ¿Qué profundidad de muestreo debemos seleccionar? Observa cuántas secuencias tiene cada muestra visualizando la tabla table.qzv y selecciona la profundidad de muestreo (pista: ¿cuáles son los valores menores y mayores de secuencias en una muestra? ¿Cuál es la mediana? ¿Y el promedio? ¿Qué valor permitirá que mantengamos la mayor cantidad de muestras posibles?). En base a este número realizaremos el paso de rarefacción de muestras.
+### Pregunta 1 - ¿Qué profundidad de muestreo debemos seleccionar? Observa cuántas secuencias tiene cada muestra visualizando la tabla table.qzv y selecciona la profundidad de muestreo (pista: ¿cuáles son los valores menores y mayores de secuencias en una muestra? ¿Cuál es la mediana? ¿Y el promedio? ¿Qué valor permitirá que mantengamos la mayor cantidad de muestras posibles?). En base a este número realizaremos el paso de rarefacción de muestras.
 
 Para establecer la profundidad de muestreo se examinó la distribución del número de secuencias denoised por muestra mediante la visualización table.qzv. Los valores observados oscilaron entre un mínimo de 163 y un máximo de 2.165 lecturas por muestra, con una mediana de 1.197 y una media de 1.214 lecturas. ![](assets/sample-frequency-detail.svg) Si se fijara la profundidad de muestreo en 163 lecturas, se conservarían todas las muestras, pero este valor resultaría demasiado bajo para describir de forma estable comunidades microbianas de suelo, donde una cobertura limitada puede producir estimaciones de diversidad dominadas por azar de muestreo. Por otro lado, profundidades demasiado altas provocarían la pérdida de un número excesivo de muestras. Por ello, se seleccionó una profundidad de rarefacción de 919 lecturas por muestra, valor que permite conservar 43 muestras (81,13%) y 39.517 observaciones (61,40%) tras el proceso de rarefacción. Este umbral representa un compromiso adecuado entre mantener la mayor cantidad posible de muestras y garantizar una cobertura suficiente y homogénea para realizar comparaciones ecológicas significativas entre comunidades. ![](assets/denoised-samples.png)
 
@@ -185,7 +176,7 @@ Para establecer la profundidad de muestreo se examinó la distribución del núm
 
 Una vez calculadas las métricas de diversidad alfa, se evalúa si existen diferencias significativas entre grupos de muestras definidos por variables categóricas de los metadatos.
 
-### ¿Qué variable categórica de los metadatos está asociada con más fuerza con las diferencias en riqueza de la comunidad? ¿Y con igualdad?
+### Pregunta 2 - ¿Qué variable categórica de los metadatos está asociada con más fuerza con las diferencias en riqueza de la comunidad? ¿Y con igualdad?
 
 Para responder a la pregunta sobre qué variable categórica de los metadatos se asocia con mayor fuerza a las diferencias en riqueza y en igualdad de la comunidad, se utilizaron métricas específicas de diversidad alfa. Para evaluar qué variables categóricas de los metadatos se asocian con diferencias en la diversidad alfa de las comunidades microbianas, se utilizaron las métricas observed features (riqueza) y evenness de Pielou (igualdad), analizadas mediante la prueba no paramétrica de Kruskal–Wallis para las variables vegetation, transect-name y site-name.
 
@@ -197,8 +188,7 @@ En conjunto, estos resultados indican que la presencia de vegetación se asocia 
 
 Aunque la variable site-name muestra una alta dispersión en los valores de riqueza entre sitios individuales, las comparaciones estadísticas no evidencian diferencias consistentes entre grupos, probablemente debido al reducido número de muestras por sitio. En contraste, la variable vegetation presenta diferencias estadísticamente significativas y una separación clara entre los grupos con y sin vegetación, indicando una asociación más robusta con la riqueza microbiana. ![](assets/alpha-site-name.svg) ![](assets/alpha-vegetation.svg)
 
-```{bash}
-#| echo: false
+```bash
 qiime diversity alpha-group-significance \
   --i-alpha-diversity core-metrics-results/observed_features_vector.qza \
   --m-metadata-file sample-metadata.tsv \
@@ -221,8 +211,7 @@ En conjunto, la diversidad beta indica que la vegetación es el principal factor
 
 ![](assets/beta-significance-transact-name-baq.png) ![](assets/beta-significance-transact-name-yun.png) ![](assets/beta-significance-vegetation-yes.png) ![](assets/beta-significance-vegetation-no.png)
 
-```{bash}
-#| echo: false
+```bash
 qiime diversity beta-group-significance \
   --i-distance-matrix core-metrics-results/bray_curtis_distance_matrix.qza \
   --m-metadata-file sample-metadata.tsv \
@@ -258,8 +247,7 @@ Una vez inferidas las secuencias representativas (ASVs), se asigna su clasificac
 
 Tras la clasificación, se genera una tabla con las asignaciones taxonómicas y una visualización de la composición relativa de las comunidades, donde cada muestra se representa como una barra apilada que muestra la proporción de los distintos taxones detectados. Esta representación permite observar cambios globales en la estructura taxonómica entre grupos de muestras definidos por los metadatos.
 
-```{bash}
-#| echo: false
+```bash
 wget -O silva-138-99-nb-classifier.qza https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
 qiime feature-classifier classify-sklearn --i-classifier silva-138-99-nb-classifier.qza --i-reads rep-seqs.qza --o-classification taxonomy.qza
 qiime metadata tabulate --m-input-file taxonomy.qza --o-visualization taxonomy.qzv
@@ -267,7 +255,7 @@ qiime taxa barplot --i-table table.qza --i-taxonomy taxonomy.qza --m-metadata-fi
 qiime tools export --input-path taxa-bar-plots.qzv --output-path ./taxa-bar-plots/
 ```
 
-### ¿Qué pasa si evaluamos algunas de las secuencias con BLAST? ¿Son las clasificaciones taxonómicas diferentes a las de QIIME2? ¿En qué nivel taxonómico surgen las diferencias?
+### Pregunta 3 - ¿Qué pasa si evaluamos algunas de las secuencias con BLAST? ¿Son las clasificaciones taxonómicas diferentes a las de QIIME2? ¿En qué nivel taxonómico surgen las diferencias?
 
 Al comparar la clasificación taxonómica de algunas secuencias representativas mediante BLAST con la obtenida con el clasificador Naive Bayes de QIIME2, se observa una alta concordancia en niveles taxonómicos superiores (filo y clase). Las discrepancias aparecen principalmente en niveles bajos, especialmente género y especie, donde BLAST tiende a asignar etiquetas más específicas basadas en la mejor coincidencia directa, mientras que el clasificador de QIIME2 adopta una asignación más conservadora basada en probabilidades de pertenencia.
 
@@ -275,8 +263,7 @@ Al comparar la clasificación taxonómica de algunas secuencias representativas 
 
 Dado que el análisis PERMANOVA identificó a vegetation como la variable con mayor asociación a diferencias en composición comunitaria, esta columna se utilizó como factor de agrupación en el análisis ANCOM para detectar taxones con abundancia diferencial entre muestras con y sin vegetación.
 
-```{bash}
-#| echo: false
+```bash
 qiime composition add-pseudocount \
   --i-table table.qza \
   --o-composition-table comp-table.qza
@@ -328,10 +315,10 @@ qiime tools export \
   --output-path ./l5-ancom-vegetation/
 ```
 
-### ¿Qué géneros presentan diferencias significativas en abundancia entre grupos de muestras?
+### Pregunta 4 - ¿Qué géneros presentan diferencias significativas en abundancia entre grupos de muestras?
 
 El análisis ANCOM a nivel de género (nivel taxonómico 6) identificó únicamente un número reducido de taxones con abundancia diferencial entre suelos con y sin vegetación. En particular, se detectó un enriquecimiento en muestras con vegetación de géneros pertenecientes a Pedosphaeraceae y Gemmatimonadaceae, mientras que el resto de los géneros no mostraron diferencias significativas. Esto se refleja en el gráfico ANCOM, donde la mayoría de los valores W permanecen cercanos a cero, indicando un comportamiento conservador del método ante datos dispersos.
 
 Para aumentar la robustez del análisis, las ASVs se colapsaron a nivel de familia (nivel taxonómico 5). A este nivel, ANCOM identificó nuevamente a Pedosphaeraceae (filo Verrucomicrobiota) y Gemmatimonadaceae (filo Gemmatimonadota) como familias significativamente más abundantes en suelos con vegetación. La mayoría de las demás familias no presentaron diferencias entre condiciones.
 
-En conjunto, estos resultados indican que la presencia de vegetación se asocia a cambios específicos en la composición microbiana del suelo, impulsados principalmente por el enriquecimiento de linajes bacterianos asociados a ambientes con mayor disponibilidad de materia orgánica y actividad biológica vegetal. ![](assets/ancom-l5.svg) ![](assets/ancom-l6.svg)
+En conjunto, estos resultados indican que la presencia de vegetación se asocia a cambios específicos en la composición microbiana del suelo, impulsados principalmente por el enriquecimiento de linajes bacterianos asociados a ambientes con mayor disponibilidad de materia orgánica y actividad biológica vegetal. ![](assets/ancom-l5.svg) ![](assets/ancom-l6.png)
