@@ -1,17 +1,17 @@
 ---
-title: "RNA-seq Obesidad — Análisis Completo"
+title: "Análisis de Datos Metagenómicos con QIIME2"
 author:
-  - name: Melissa Ndombasi Bokuy, Viktor Porvaznik, Jose Iglesias Moure, Lydia Alvarez Erviti, Maria del Mar Rodriguez Ruiz​
+  - name: Viktor Porvaznik
     affiliation: "UNIR"
 format:
   html:
     toc: true
-    toc-depth: 4
+    toc-depth: 3
     css: assets/styles.css
     theme: cosmo
+execute:
+  eval: false
 ---
-
-# Análisis de Datos Metagenómicos con QIIME2
 
 ## 0. Preparación del Entorno de Trabajo
 
